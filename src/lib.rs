@@ -4,8 +4,17 @@
  * Accepted keys are any type with slices that implement Eq.
  * Accepted values are anything that the tree can own.
  *
- * It is recommended to use static sized numbers or strings.
- * Strings can be converted to work with this tree with .as_ref().
+ * It is recommended to use static sized numbers or strings. Use `u8` if
+ * string keys are being used.
+ * 
+ * Using the Trie with strings requires using the designated string
+ * functions; this will automatically turn the string into a slice of 
+ * u8's which is compatible with the tree. Unicode equivalency is not
+ * checked.
+ * 
+ * It is not recommended to use the Trie with large structs as the key,
+ * as performance will suffer due to the key being cloned into the prefix
+ * tree, as opposed to referenced or taken into ownership.
  */
 
 #![forbid(unsafe_code, missing_docs, missing_debug_implementations)]
@@ -81,18 +90,18 @@ impl<K: Eq + Clone, V> Trie<K, V> {
     /// sets a key to a value
     /// returns the key evicted if there was already a key.
     #[inline]
-    pub fn set(&mut self, key: &[K], val: V) -> Option<V> {
+    pub fn put(&mut self, key: &[K], val: V) -> Option<V> {
         self.root.insert(key, val)
     }
 
     /// sets a key to a value
     /// returns an Err() if the key already existed.
     #[inline]
-    pub fn try_set(&mut self, key: &[K], val: V) -> Result<(), KeyExistsError> {
+    pub fn try_put(&mut self, key: &[K], val: V) -> Result<(), KeyExistsError> {
         match self.has(key) {
             true => Err(KeyExistsError),
             false => {
-                self.set(key, val);
+                self.put(key, val);
                 Ok(())
             }
         }
@@ -113,6 +122,40 @@ impl<K: Eq + Clone, V> Trie<K, V> {
     #[inline]
     pub fn size(&self) -> usize {
         self.root.size()
+    }
+}
+
+impl<V> Trie<u8, V> {
+    /// Puts a value in with a certain string key.
+    /// The old value is ejected if it exists.
+    pub fn put_str(&mut self, key: &str, val: V) -> Option<V> {
+        self.put(key.as_bytes(), val)
+    }
+
+    /// Puts a value in with a certain string key.
+    /// Errors if there is already a value for the given string.
+    pub fn try_put_str(&mut self, key: &str, val: V) -> Result<(), KeyExistsError> {
+        self.try_put(key.as_bytes(), val)
+    }
+
+    /// Gets a reference to the value associated to the bytes of a given string key.
+    pub fn get_str(&mut self, key: &str) -> Option<&V> {
+        self.get(key.as_bytes())
+    }
+
+    /// Gets a mutable reference to the value associated to the bytes of a given string key.
+    pub fn get_mut_str(&mut self, key: &str) -> Option<&mut V> {
+        self.get_mut(key.as_bytes())
+    }
+
+    /// Checks if a given string key is associated to a value.
+    pub fn has_str(&mut self, key: &str) -> bool {
+        self.has(key.as_bytes())
+    }
+
+    /// Removes a given string key from the Trie.
+    pub fn remove_str(&mut self, key: &str) -> Result<V, KeyNotFoundError> {
+        self.remove(key.as_bytes())
     }
 }
 
@@ -302,14 +345,14 @@ mod tests {
         let v1 = vec!["a", "ab", "ac", "b", "c", "abc", "abcde", "abced"];
         let v2 = vec![1, 2, 3, 4, 5, 6, 7, 9];
         for i in 0..8 {
-            trie.set(v1[i].as_ref(), v2[i]);
+            trie.put_str(v1[i], v2[i]);
         }
         for i in 0..8 {
-            assert_eq!(trie.get(v1[i].as_ref()), Some(&v2[i]));
+            assert_eq!(trie.get_str(v1[i]), Some(&v2[i]));
         }
         assert_eq!(trie.size(), 9);
-        trie.set(v1[3].as_ref(), 33);
-        assert_eq!(trie.get(v1[3].as_ref()), Some(&33));
+        trie.put_str(v1[3], 33);
+        assert_eq!(trie.get_str(v1[3]), Some(&33));
         assert_eq!(trie.size(), 9);
     }
 
@@ -319,21 +362,21 @@ mod tests {
         let v1 = vec!["a", "ab", "ac", "b", "c", "abc", "abcde", "abced"];
         let v2 = vec![1, 2, 3, 4, 5, 6, 7, 9];
         for i in 0..8 {
-            trie.set(v1[i].as_ref(), v2[i]);
+            trie.put_str(v1[i], v2[i]);
         }
         for i in 0..8 {
-            assert_eq!(trie.get(v1[i].as_ref()), Some(&v2[i]));
+            assert_eq!(trie.get_str(v1[i]), Some(&v2[i]));
         }
         assert_eq!(trie.size(), 9);
-        let removed = trie.remove("abcd".as_ref());
+        let removed = trie.remove_str("abcd");
         assert!(removed.is_err());
-        let removed = trie.remove("abcde".as_ref());
+        let removed = trie.remove_str("abcde");
         assert_eq!(removed.ok(), Some(7));
         assert_eq!(trie.size(), 7);
-        let removed: Result<i32, KeyNotFoundError> = trie.remove("c".as_ref());
+        let removed: Result<i32, KeyNotFoundError> = trie.remove_str("c");
         assert_eq!(removed.ok(), Some(5));
         assert_eq!(trie.size(), 6);
-        let removed = trie.remove("abcde".as_ref());
+        let removed = trie.remove_str("abcde");
         assert!(removed.is_err());
         assert_eq!(trie.size(), 6);
     }
