@@ -1,9 +1,9 @@
 /*!
  * A compressed prefix tree implementation.
- * 
+ *
  * Accepted keys are any type with slices that implement Eq.
  * Accepted values are anything that the tree can own.
- * 
+ *
  * It is recommended to use static sized numbers or strings.
  * Strings can be converted to work with this tree with .as_ref().
  */
@@ -84,7 +84,7 @@ impl<K: Eq + Clone, V> Trie<K, V> {
     pub fn set(&mut self, key: &[K], val: V) -> Option<V> {
         self.root.insert(key, val)
     }
-    
+
     /// sets a key to a value
     /// returns an Err() if the key already existed.
     #[inline]
@@ -94,7 +94,7 @@ impl<K: Eq + Clone, V> Trie<K, V> {
             false => {
                 self.set(key, val);
                 Ok(())
-            },
+            }
         }
     }
 
@@ -182,7 +182,9 @@ impl<K: Eq + Clone, V> TrieNode<K, V> {
         if split.is_some() {
             let (idx, node) = split.unwrap();
             let inject = TrieNode {
-                prefix: (&rest[(rest.len() - 1)..(node.prefix.len() - rest.len())]).to_owned().into_boxed_slice(),
+                prefix: (&rest[(rest.len() - 1)..(node.prefix.len() - rest.len())])
+                    .to_owned()
+                    .into_boxed_slice(),
                 children: Vec::new(),
                 value: Some(value),
             };
@@ -206,7 +208,7 @@ impl<K: Eq + Clone, V> TrieNode<K, V> {
             .enumerate()
             .find(|(_idx, node)| node.prefix.starts_with(key))
     }
-    
+
     fn remove(&mut self, key: &[K]) -> Option<V> {
         if key == self.prefix.as_ref() {
             // us, this should only happen on first node. eject value.
@@ -290,7 +292,6 @@ impl<K: Eq + Clone, V> TrieNode<K, V> {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -336,5 +337,4 @@ mod tests {
         assert!(removed.is_err());
         assert_eq!(trie.size(), 6);
     }
-
 }
