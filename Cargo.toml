@@ -1,10 +1,10 @@
 [package]
 name = "v-trie"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "Just a generic compressed prefix tree."
 license = "MIT"
-repository = "https://github.com/vargrind/v-collections/"
+repository = "https://github.com/vargrind/v-trie.rs/"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
