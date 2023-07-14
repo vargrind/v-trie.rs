@@ -387,4 +387,17 @@ mod tests {
         assert!(removed.is_err());
         assert_eq!(trie.size(), 6);
     }
+
+    #[test]
+    fn i32_tests() {
+        let mut trie = Trie::new();
+        let v1: Vec<Box<[i32]>> = vec![[1].into(), [2].into(), [3].into(), [4].into(), [2, 3, 4].into(), [2, 3, 4, 5].into(), [3, 5, 1].into(), [1, 11, 111].into(), [1, 111, 11].into()];
+        let v2 = vec!["a", "b", "c", "d", "e", "f", "g" ,"h", "i"];
+        for i in 0..v1.len() {
+            trie.put(v1[i].as_ref(), v2[i].to_owned());
+        }
+        for i in 0..v1.len() {
+            assert_eq!(trie.get(v1[i].as_ref()), Some(&v2[i].to_owned()));
+        }
+    }
 }
