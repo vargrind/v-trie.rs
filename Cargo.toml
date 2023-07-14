@@ -1,6 +1,6 @@
 [package]
 name = "v-trie"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Just a generic compressed prefix tree."
 license = "MIT"
