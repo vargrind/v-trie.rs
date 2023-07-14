@@ -15,6 +15,13 @@
  * It is not recommended to use the Trie with large structs as the key,
  * as performance will suffer due to the key being cloned into the prefix
  * tree, as opposed to referenced or taken into ownership.
+ * 
+ * Some unimplemented todos include:
+ * - Add support for iteration
+ * - Add support for in-place iteration, without IntoIter
+ * 
+ * In-place iteration without requiring the usage of Rc's or unsafe will likely be difficult due to the
+ * tree's unidirectional nature.
  */
 
 #![forbid(unsafe_code, missing_docs, missing_debug_implementations)]
