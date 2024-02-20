@@ -50,24 +50,31 @@ pub struct KeyNotFoundError;
 /// holds arbitrary values, uses string keys
 /// common slices of stored keys are compressed by
 /// not storing duplicates of those common slices.
-#[derive(Debug, Default, PartialEq, Eq)]
-pub struct Trie<K: Eq + Clone + Default, V> {
+#[derive(Debug, PartialEq, Eq)]
+pub struct Trie<K: Eq + Clone, V> {
     /// tree root
     /// this will always be a node with the empty string.
     root: TrieNode<K, V>,
 }
 
-#[derive(Debug, Default, PartialEq, Eq)]
-struct TrieNode<K: Eq + Clone + Default, V> {
+#[derive(Debug, PartialEq, Eq)]
+struct TrieNode<K: Eq + Clone, V> {
     children: Vec<TrieNode<K, V>>,
     value: Option<V>,
     prefix: Box<[K]>,
 }
 
-impl<K: Eq + Clone + Default, V: Default> Trie<K, V> {
+impl<K: Eq + Clone, V> Trie<K, V> {
     /// constructs an empty prefix tree
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        Default::default()
+        Trie {
+            root: TrieNode {
+                value: None,
+                prefix: Box::new([]),
+                children: Vec::new(),
+            },
+        }
     }
 
     /// gets the value of a key
@@ -126,7 +133,7 @@ impl<K: Eq + Clone + Default, V: Default> Trie<K, V> {
     }
 }
 
-impl<V: Default> Trie<u8, V> {
+impl<V> Trie<u8, V> {
     /// Puts a value in with a certain string key.
     /// The old value is ejected if it exists.
     pub fn put_str(&mut self, key: &str, val: V) -> Option<V> {
@@ -160,7 +167,7 @@ impl<V: Default> Trie<u8, V> {
     }
 }
 
-impl<K: Eq + Clone + Default, V: Default> TrieNode<K, V> {
+impl<K: Eq + Clone, V> TrieNode<K, V> {
     fn size(&self) -> usize {
         let mut size = 1;
         for other in self.children.iter() {
