@@ -66,7 +66,6 @@ struct TrieNode<K: Eq + Clone, V> {
 
 impl<K: Eq + Clone, V> Trie<K, V> {
     /// constructs an empty prefix tree
-    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Trie {
             root: TrieNode {
@@ -164,6 +163,12 @@ impl<V> Trie<u8, V> {
     /// Removes a given string key from the Trie.
     pub fn remove_str(&mut self, key: &str) -> Result<V, KeyNotFoundError> {
         self.remove(key.as_bytes())
+    }
+}
+
+impl<K: Eq + Clone, V> Default for Trie<K, V> {
+    fn default() -> Self {
+        Trie::new()
     }
 }
 
