@@ -6,20 +6,20 @@
  *
  * It is recommended to use static sized numbers or strings. Use `u8` if
  * string keys are being used.
- * 
+ *
  * Using the Trie with strings requires using the designated string
- * functions; this will automatically turn the string into a slice of 
+ * functions; this will automatically turn the string into a slice of
  * u8's which is compatible with the tree. Unicode equivalency is not
  * checked.
- * 
+ *
  * It is not recommended to use the Trie with large structs as the key,
  * as performance will suffer due to the key being cloned into the prefix
  * tree, as opposed to referenced or taken into ownership.
- * 
+ *
  * Some unimplemented todos include:
  * - Add support for iteration
  * - Add support for in-place iteration, without IntoIter
- * 
+ *
  * In-place iteration without requiring the usage of Rc's or unsafe will likely be difficult due to the
  * tree's unidirectional nature.
  */
@@ -166,13 +166,19 @@ impl<V> Trie<u8, V> {
     }
 }
 
+impl<K: Eq + Clone, V> Default for Trie<K, V> {
+    fn default() -> Self {
+        Trie::new()
+    }
+}
+
 impl<K: Eq + Clone, V> TrieNode<K, V> {
     fn size(&self) -> usize {
         let mut size = 1;
         for other in self.children.iter() {
             size += other.size();
         }
-        return size;
+        size
     }
 
     fn get(&self, key: &[K]) -> Option<&V> {
@@ -188,12 +194,9 @@ impl<K: Eq + Clone, V> TrieNode<K, V> {
     }
 
     fn leaf(&self, key: &[K]) -> Option<&Self> {
-        for node in self.children.iter() {
-            if key.starts_with(node.prefix.as_ref()) {
-                return Some(&node);
-            }
-        }
-        None
+        self.children
+            .iter()
+            .find(|&node| key.starts_with(node.prefix.as_ref()))
     }
 
     fn get_mut(&mut self, key: &[K]) -> Option<&mut V> {
@@ -209,12 +212,9 @@ impl<K: Eq + Clone, V> TrieNode<K, V> {
     }
 
     fn leaf_mut(&mut self, key: &[K]) -> Option<&mut Self> {
-        for node in self.children.iter_mut() {
-            if key.starts_with(&node.prefix) {
-                return Some(node);
-            }
-        }
-        None
+        self.children
+            .iter_mut()
+            .find(|node| key.starts_with(&node.prefix))
     }
 
     fn insert(&mut self, key: &[K], value: V) -> Option<V> {
@@ -224,15 +224,15 @@ impl<K: Eq + Clone, V> TrieNode<K, V> {
         let rest = &key[self.prefix.len()..];
         let leaf = self.leaf_mut(rest);
         // still longer than leaf, and leaf exists
-        if leaf.is_some() {
-            return leaf.unwrap().insert(rest, value);
+        if let Some(leaf) = leaf {
+            return leaf.insert(rest, value);
         }
         // shorter than a valid leaf split target
         let split = self.insert_split_target(rest);
         if split.is_some() {
             let (idx, node) = split.unwrap();
             let inject = TrieNode {
-                prefix: (&rest[(rest.len() - 1)..(node.prefix.len() - rest.len())])
+                prefix: (rest[(rest.len() - 1)..(node.prefix.len() - rest.len())])
                     .to_owned()
                     .into_boxed_slice(),
                 children: Vec::new(),
@@ -249,7 +249,7 @@ impl<K: Eq + Clone, V> TrieNode<K, V> {
             value: Some(value),
         };
         self.children.push(inject);
-        return None;
+        None
     }
 
     fn insert_split_target(&mut self, key: &[K]) -> Option<(usize, &mut Self)> {
@@ -271,10 +271,8 @@ impl<K: Eq + Clone, V> TrieNode<K, V> {
         // get leaf node
         let rest = &key[self.prefix.len()..];
         let leaf = self.leaf_mut(rest);
-        if leaf.is_none() {
-            // not found, bail
-            return None;
-        }
+        // bail if not found
+        leaf.as_ref()?;
         // unwrap it - this relies on local variable shadowing
         let leaf = leaf.unwrap();
         // leaf is not exact
@@ -328,7 +326,7 @@ impl<K: Eq + Clone, V> TrieNode<K, V> {
         // this only makes sense if we only have 1 node.
         assert!(self.children.len() == 1);
         // take the node from below
-        let taken = std::mem::replace(&mut self.children[0].children, Vec::new());
+        let taken = std::mem::take(&mut self.children[0].children);
         // remove the node we have
         let node = self.children.remove(0);
         // steal their prefix
@@ -349,8 +347,8 @@ mod tests {
     #[test]
     fn insertion_retrieval() {
         let mut trie = Trie::new();
-        let v1 = vec!["a", "ab", "ac", "b", "c", "abc", "abcde", "abced"];
-        let v2 = vec![1, 2, 3, 4, 5, 6, 7, 9];
+        let v1 = ["a", "ab", "ac", "b", "c", "abc", "abcde", "abced"];
+        let v2 = [1, 2, 3, 4, 5, 6, 7, 9];
         for i in 0..8 {
             trie.put_str(v1[i], v2[i]);
         }
@@ -366,8 +364,8 @@ mod tests {
     #[test]
     fn insertion_deletion() {
         let mut trie = Trie::new();
-        let v1 = vec!["a", "ab", "ac", "b", "c", "abc", "abcde", "abced"];
-        let v2 = vec![1, 2, 3, 4, 5, 6, 7, 9];
+        let v1 = ["a", "ab", "ac", "b", "c", "abc", "abcde", "abced"];
+        let v2 = [1, 2, 3, 4, 5, 6, 7, 9];
         for i in 0..8 {
             trie.put_str(v1[i], v2[i]);
         }
@@ -391,8 +389,18 @@ mod tests {
     #[test]
     fn i32_tests() {
         let mut trie = Trie::new();
-        let v1: Vec<Box<[i32]>> = vec![[1].into(), [2].into(), [3].into(), [4].into(), [2, 3, 4].into(), [2, 3, 4, 5].into(), [3, 5, 1].into(), [1, 11, 111].into(), [1, 111, 11].into()];
-        let v2 = vec!["a", "b", "c", "d", "e", "f", "g" ,"h", "i"];
+        let v1: Vec<Box<[i32]>> = vec![
+            [1].into(),
+            [2].into(),
+            [3].into(),
+            [4].into(),
+            [2, 3, 4].into(),
+            [2, 3, 4, 5].into(),
+            [3, 5, 1].into(),
+            [1, 11, 111].into(),
+            [1, 111, 11].into(),
+        ];
+        let v2 = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
         for i in 0..v1.len() {
             trie.put(v1[i].as_ref(), v2[i].to_owned());
         }
