@@ -26,6 +26,9 @@
 
 #![forbid(unsafe_code, missing_docs, missing_debug_implementations)]
 
+mod iterator;
+pub use iterator::TrieIterator;
+
 cfg_if::cfg_if! {
     if #[cfg(feature ="std")] {
         extern crate std;
@@ -101,6 +104,11 @@ impl<K: Eq + Clone, V> Trie<K, V> {
         self.root.insert(key, val)
     }
 
+    /// Same as put, but more in line with the standard library's collections.
+    pub fn insert(&mut self, key: &[K], val: V) -> Option<V> {
+        self.put(key, val)
+    }
+
     /// sets a key to a value
     /// returns an Err() if the key already existed.
     #[inline]
@@ -129,6 +137,11 @@ impl<K: Eq + Clone, V> Trie<K, V> {
     #[inline]
     pub fn size(&self) -> usize {
         self.root.size()
+    }
+
+    /// Returns an iterator over the key-value pairs of the Trie.
+    pub fn iter(&self) -> TrieIterator<'_, K, V> {
+        TrieIterator::new(self)
     }
 }
 
